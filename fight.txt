@@ -1,0 +1,37 @@
+import random, playsound
+from time import sleep
+
+colours = {
+    'red': "31",
+    'green': "32",
+    'yellow': "33",
+    'blue': "34",
+    'purple': "35",
+    'cyan': "36",
+    'white': "0",
+}
+
+def text(words="", colour='white', slow=False, fast=False, stop=False, hold=0):
+
+    d = 0.015
+    
+    if slow:
+        d = max(0.1, d * 3)
+    elif fast:
+        d = 0
+    
+    for char in words:
+        sleep(d)  # Use the class's delay attribute
+        print(f"\033[1;{colours[colour]};40m{char}", end="", flush=True) 
+        
+        if char in ".,!?:;":
+            sleep(d * 5)
+    
+    if hold:
+        sleep(hold)
+
+    if stop:
+        input()
+
+    print("\n")
+
