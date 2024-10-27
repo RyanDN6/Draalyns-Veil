@@ -3,7 +3,7 @@ import weapons
 class Character(object):
     def __init__(self, ally=True, type="", name="", info="", maxHitpoints=100, defence=0, attack=0, magic=0, agility=0, evasion=0, luck=0, skill="", weapon="Fists", sp=20, spRecovery=3, defend=False, taunt=False, stunned=False, poisoned=0, bleeding=False):
         self.skill = skill
-        self.level = 0
+        self.level = 1
         self.experience = 0
         self.type = type
         self.skills = []
@@ -27,6 +27,7 @@ class Character(object):
         self.stunned = stunned
         self.poisoned = poisoned
         self.bleeding = bleeding
+        self.gold = 0
     
 class Hero(Character):
     def __init__(self):

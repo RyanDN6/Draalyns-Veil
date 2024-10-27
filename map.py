@@ -70,22 +70,14 @@ def generateRiver(matrix, flow_direction="random", symbol="~"):
     
     if flow_direction == "left-right":
         start_x = 0
-        start_y = random.randint(0, height - 1)
+        start_y = random.randint(4, height - 5)
         direction = "right"
-    elif flow_direction == "right-left":
-        start_x = width - 1
-        start_y = random.randint(0, height - 1)
-        direction = "left"
     elif flow_direction == "top-down":
-        start_x = random.randint(0, width - 1)
+        start_x = random.randint(4, width - 5)
         start_y = 0
         direction = "down"
-    elif flow_direction == "bottom-up":
-        start_x = random.randint(0, width - 1)
-        start_y = height - 1
-        direction = "up"
     else:
-        raise ValueError("Invalid flow direction. Please choose from: 'random', 'left-right', 'right-left', 'top-down', 'bottom-up'")
+        raise ValueError("Invalid flow direction. Please choose from: 'random', 'left-right', 'top-down'")
     
     current_x, current_y = start_x, start_y
     
