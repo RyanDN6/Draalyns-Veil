@@ -403,7 +403,7 @@ def defend(scroll, attacker):
 
 def attack(scroll, attacker, target):
     scroll.text(f"{attacker.name} attacks {target.name}!")
-    damage = (attacker.attack + attacker.weapon.damage + random.randint(1, attacker.weapon.damageRoll)) - target.defence
+    damage = max((attacker.attack + attacker.weapon.damage + random.randint(0, attacker.weapon.damageRoll)) - target.defence, 1)
     
     if target.defend:
         damage = damage // 2
@@ -439,7 +439,7 @@ def attack(scroll, attacker, target):
         # Check for critical hit
         crit = random.randint(1, 100)
         if crit < attacker.weapon.critChance:
-            damage = damage * 2
+            damage = max(damage * 2, attacker.attack + attacker.weapon.damage + random.randint(0, attacker.weapon.damageRoll))
             target.hitpoints -= damage
             target.hitpoints = max(target.hitpoints, 0)  # Ensure HP doesn't go below 0
             return scroll.text(f"{attacker.name} landed a critical hit!\n{target.name} takes {damage} damage!", colour='red', hold=True)
@@ -783,7 +783,27 @@ def plains_map():
     plains = map.addVillage(plains)
     coords = map.spawn(plains)
     return [coords, plains, "Plains"]
+
+def displayItems(scroll, party):
+    clear()
+    items = [item for item in party[0].inventory if item.type == "item"]
+    scroll.text("----------Items----------", colour='yellow', fast=True)
     
+    for i in range(len(items)):
+        scroll.text(f"{i + 1} = {items[i].name}")
+    
+    input()
+
+def equipment(scroll, party):
+    clear()
+    equipment = [item for item in party[0].inventory if item.type != "item"]
+    scroll.text("----------Equipment----------", colour='yellow', fast=True)
+    
+    for i in range(len(equipment)):
+        scroll.text(f"{i + 1} = {equipment[i].name}")
+    
+    input()
+
 def flush_input(screen):
     # Set the input to non-blocking mode
     screen.nodelay(True)
@@ -825,7 +845,8 @@ def curseStart(screen):
     "-": curses.color_pair(5),
     "|": curses.color_pair(5),
     "_": curses.color_pair(5),
-    "#": curses.color_pair(3)
+    "#": curses.color_pair(3),
+    "=": curses.color_pair(3)
     }
 
     curses.noecho()  # Don't echo key presses
@@ -883,7 +904,7 @@ def playMap(matrix, player_pos, area, party, scroll=None):
 
             # Draw bottom border
             screen.addstr(len(matrix) + 3, 0,f"|{'_' * (len(matrix[0]) * 2)}|")  # Bottom border
-            screen.addstr(len(matrix) + 5, 1,"w, a, s, d: Move | q: Quit | p: Party | ?: Help")
+            screen.addstr(len(matrix) + 5, 1, "w, a, s, d: Move | q: Quit | p: Party | i: Items | e: Equipment | Space: Search | ?: Help")
             screen.addstr(len(matrix) + 6, 1,f"Current tile: {tile}")
             # Refresh the screen
             screen.refresh()
@@ -901,7 +922,6 @@ def playMap(matrix, player_pos, area, party, scroll=None):
                     new_x = max(0, x - 1)
                 elif key == 'd':
                     new_x = min(len(matrix[0]) - 1, x + 1)
-                flush_input(screen)
                        
                 tile = matrix[new_y][new_x]    
                 # Update position if valid move
@@ -916,11 +936,16 @@ def playMap(matrix, player_pos, area, party, scroll=None):
                         
                         t.enter(area, party, first=True)
                         steps = 0
+                        if matrix[new_y][new_x + 1] != "|":
+                            player_pos = (new_x + 1, new_y)
+                        else:
+                            player_pos = (new_x - 1, new_y)
 
                         screen = curses.initscr()
+                        flush_input(screen)
                         colour_mapping = curseStart(screen)
 
-                    if tile in ["#"]:
+                    elif tile in ["="]:
                         steps -= 1
 
                     elif steps > 8 and random.randint(1, 15) == 1:
@@ -948,7 +973,7 @@ def playMap(matrix, player_pos, area, party, scroll=None):
 
                         # Draw bottom border
                         screen.addstr(len(matrix) + 3, 0, f"|{'_' * (len(matrix[0]) * 2)}|")  # Bottom border
-                        screen.addstr(len(matrix) + 5, 1, "w, a, s, d: Move | q: Quit | p: Party | ?: Help")
+                        screen.addstr(len(matrix) + 5, 1, "w, a, s, d: Move | q: Quit | p: Party | i: Items | e: Equipment | Space: Search | ?: Help")
                         screen.addstr(len(matrix) + 6, 1,f"Current tile: {tile}")
                         
                         mixer.music.fadeout(100)
@@ -993,7 +1018,11 @@ def playMap(matrix, player_pos, area, party, scroll=None):
                     displayCharacters(scroll, party)
                     lvl.partyLevels(party)
                     input("Press any key to return")
-                
+                elif key == "i":
+                    displayItems(scroll, party)
+                elif key == "e":
+                    equipment(scroll, party)
+                    pass                
 
                 screen = curses.initscr()
                 colour_mapping = curseStart(screen)

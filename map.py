@@ -41,7 +41,7 @@ def generateRandomMap(matrix_width, matrix_height, symbol, num_groups, group_siz
 
     return matrix
 
-def generateRiver(matrix, flow_direction="random", symbol="~", num_bridges=3, bridge_symbol="#", min_bridge_distance=6):
+def generateRiver(matrix, flow_direction="random", symbol="~", num_bridges=3, bridge_symbol="=", min_bridge_distance=6):
     """
     Generate a river on the existing matrix with specified flow direction and optional bridges.
     
@@ -187,7 +187,7 @@ def generateClusters(matrix, symbol, clusters_count, cluster_size_range):
     
     return matrix
 
-def addVillage(matrix, position=None):
+def addVillage(matrix, position=None, safe=["."]):
     """
     Add a village ASCII art to the matrix at specified position or random valid position.
     The village looks like:
@@ -208,8 +208,8 @@ def addVillage(matrix, position=None):
     """
     
     # Village dimensions
-    village_width = 8
-    village_height = 10
+    village_width = 10
+    village_height = 6
     
     # Get matrix dimensions
     matrix_height = len(matrix)
@@ -226,8 +226,8 @@ def addVillage(matrix, position=None):
     
     # If no position provided, find a random valid position
     if position is None:
-        # Try up to 100 times to find a valid position
-        for _ in range(500):
+        # Try up to 10000 times to find a valid position
+        for _ in range(10000):
             # Generate random position (accounting for village size)
             x = random.randint(0, matrix_width - village_width)
             y = random.randint(0, matrix_height - village_height)
@@ -236,9 +236,11 @@ def addVillage(matrix, position=None):
             valid = True
             for dy in range(village_height):
                 for dx in range(village_width):
-                    if matrix[y + dy][x + dx] != ".":
+
+                    if matrix[y + dy][x + dx] not in safe:
                         valid = False
                         break
+
                 if not valid:
                     break
             
@@ -251,8 +253,7 @@ def addVillage(matrix, position=None):
     
     # Validate the provided/found position
     x, y = position
-    if (x < 0 or x + village_width > matrix_width or 
-        y < 0 or y + village_height > matrix_height):
+    if (x < 0 or x + village_width > matrix_width or y < 0 or y + village_height > matrix_height):
         return matrix, None
     
     # Add the village to the matrix
@@ -289,5 +290,5 @@ def spawn(matrix, village=True, random=False, safe="."):
             for y in range(len(matrix)):
                 for x in range(len(matrix[0]) - 1):
                     if matrix[y][x] == "|" == matrix[y][x + 1]:
-                        return (x, y)
+                        return (x - 1, y)
 

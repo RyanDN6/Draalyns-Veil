@@ -1,4 +1,4 @@
-import os, weapons
+import os, weapons, armours, items
 from pygame import mixer
 from time import sleep
 
@@ -17,6 +17,10 @@ class Town(object):
 
         self.areaArmour = {
             "Plains": ["Plank", "Cloth Bandana", "Padded Shirt"]
+        }
+
+        self.areaItems = {
+            "Plains": ["Holy Water"]
         }
 
     def enter(self, area, characterList, first=False, quest=False):
@@ -48,7 +52,7 @@ class Town(object):
             "c": "church",
             "i": "inn",
             "t": "talk",
-            "l": "leave"
+            "q": "leave"
         }
 
         for option in options.keys():
@@ -71,7 +75,13 @@ class Town(object):
             self.scroll.text(shopText[area])
             self.scroll.text("w = Weapons")
             self.scroll.text("a = Armour")
+            self.scroll.text("i = Item")
+            self.scroll.text("q = Leave Shop")
             a = input().lower()
+
+            if a == "q":
+                self.scroll.text("Please do come back again!", stop=True)
+                break
             
             if a == "w":
                 self.scroll.text("----------Weapons----------", colour='yellow', fast=True)
@@ -83,25 +93,88 @@ class Town(object):
                 
                 pick = input()
                 if pick == "q":
-                    os.system('cls')
                     continue
                 
                 else:
-                    pick = int(pick) - 1
-
-                    if 0 <= pick < len(self.areaWeapons[area]):
-                        weapon = weapons.weaponsList[self.areaWeapons[area][pick]]
-                        self.scroll.text(f"Weapon: {weapon.name}\nAttack: {weapon.damage} + d{weapon.damageRoll}\n{"Two Handed" if weapon.twoHanded else "One Handed"}\nAccuracy: {weapon.accuracy}%\nCritical: {weapon.critChance}%\nUsed by: {" ,".join(weapon.users)}\nCost: {weapon.cost} Gold", stop=True)
-
+                    try:
+                        pick = int(pick) - 1
+                        if 0 <= pick < len(self.areaWeapons[area]):
+                            weapon = weapons.weaponsList[self.areaWeapons[area][pick]]
+                            cost = weapon.cost
+                            item = weapon
+                            self.scroll.text(f"Weapon: {weapon.name}\nAttack: {weapon.damage} + d{weapon.damageRoll}\n{"Two Handed" if weapon.twoHanded else "One Handed"}\nAccuracy: {weapon.accuracy}%\nCritical: {weapon.critChance}%\nUsed by: {" ,".join(weapon.users)}\nCost: {weapon.cost} Gold", stop=True)
+                        else:
+                            continue
+                    except Exception:
+                        continue
+                    
             elif a == "a":
-                self.scroll.text("----------Armour-----------", colour='yellow', fast=True)
+                self.scroll.text("----------Armour----------", colour='yellow', fast=True)
 
                 for i in range(len(self.areaArmour[area])):
-                    armour = weapons.armourList[self.areaArmour[area][i]]
+                    armour = armours.armourList[self.areaArmour[area][i]]
                     self.scroll.text(f"{i + 1} = {armour.name} -> {armour.cost}", fast=True)
 
                 self.scroll.text("Type the number of the weapon to view more.\nType 'q' to go back.")
+                pick = input()
+                if pick == "q":
+                    continue
             
+                else:
+                    try:
+                        pick = int(pick) - 1
+                        if 0 <= pick < len(self.areaArmour[area]):
+                            armour = armours.armourList[self.areaArmour[area][pick]]
+                            cost = armour.cost
+                            item = armour
+                            self.scroll.text(f"Type: {armour.type}\nName: {armour.name}\nDefence: {armour.defence}\nUsed by: {" ,".join(armour.users)}\nCost: {armour.cost} Gold", stop=True)
+                        else:
+                            continue
+                    except Exception:
+                        continue
+
+            elif a == "i":
+                self.scroll.text("----------Item----------", colour='yellow', fast=True)
+                for i in range(len(self.areaItems[area])):
+                    item = items.itemsList[self.areaItems[area][i]]
+                    self.scroll.text(f"{i + 1} = {item.name} -> {item.cost}", fast=True)
+                self.scroll.text("Type the number of the item to view more.\nType 'q' to go back.")
+                pick = input()
+                if pick == "q":
+                    continue
+            
+                else:
+                    try:
+                        pick = int(pick) - 1
+                        if 0 <= pick < len(self.areaItems[area]):
+                            item = items.itemsList[self.areaItems[area][pick]]
+                            cost = item.cost
+                            self.scroll.text(f"Name: {item.name}\nCost: {item.cost} Gold", stop=True)
+                        else:
+                            continue
+                    except Exception:
+                        continue
+                    
+            else:
+                continue
+            
+            gold = characterList[0].gold
+
+            self.scroll.text(f"You have {gold} Gold.\nDo you want to purchase this item for {cost} Gold?")
+
+            if self.scroll.confirm():
+                
+                if gold < cost:
+                    self.scroll.text("Not enough Gold!", stop=True)
+                    continue
+
+                else:
+                    gold -= cost
+                    characterList[0].inventory.append(item)
+                    self.scroll.text(f"The {item.name} has been added to your inventory. Gold: {gold}", stop=True)
+                    characterList[0].gold = gold
+        
+        self.enter(area, characterList)
 
     def inn(self, area, characterList):
         
@@ -124,7 +197,7 @@ class Town(object):
         if self.scroll.confirm():
             
             if gold < cost:
-                self.scroll.text("Not enough Gold!")
+                self.scroll.text("Not enough Gold!", stop=True)
 
             else:
                 
@@ -137,7 +210,7 @@ class Town(object):
                 self.scroll.text(f"All memebers of {characterList[0].name}'s party have had their HP and SP restored!", hold=True)
         
         self.scroll.text("Thank you for visiting, please do come back again!", stop=True)
-
+        characterList[0].gold = gold
         self.enter(area, characterList)
     
 

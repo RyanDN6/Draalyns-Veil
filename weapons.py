@@ -14,6 +14,7 @@ class Weapon:
             self.users = users
         self.twoHanded = twoHanded
         self.cost = cost
+        self.type = "Weapon"
 
 weaponsList = {
     "Greatsword": Weapon(name = "Greatsword", accuracy=75, critChance=5, damage=10, damageRoll=6, users=["Hero"], twoHanded=True, cost=35),
@@ -28,24 +29,5 @@ weaponsList = {
     "Dagger": Weapon(name="Dagger", damage=2, damageRoll=2, accuracy=95, critChance=40, bleed=True),
     "Poison-Tipped Dagger": Weapon(name="Poison-Tipped Dagger", damage=1, accuracy=85, critChance=20, damageRoll=2, poison=True),
     "Hook": Weapon(name="Hook", damage=0, damageRoll=2, accuracy=90, critChance=12, bleed=True),
-    "Fists": Weapon(name="Weapon", damage=1, damageRoll=3, accuracy=90, critChance=1)  
-}
-
-class Armour:
-    def __init__(self, type, name, defence=0, users=None, cost=0):
-        self.type = type
-        self.name = name
-        self.defence = defence
-
-        if users == None:
-            self.users = []
-        else:
-            self.users = users
-
-        self.cost = cost
-
-armourList = {
-    "Cloth Bandana": Armour(name="Cloth Bandana", type="Head", defence=2, users=["Hero"], cost=25),
-    "Padded Shirt": Armour(name="Padded Bandana", type="Body", defence=3, users=["Hero"], cost=45),
-    "Plank": Armour(name="Plank", type="Shield", defence=2, users=["Hero"], cost=20)
+    "Fists": Weapon(name="Weapon", damage=0, damageRoll=2, accuracy=90, critChance=1)  
 }
