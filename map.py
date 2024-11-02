@@ -41,28 +41,28 @@ def generateRandomMap(matrix_width, matrix_height, symbol, num_groups, group_siz
 
     return matrix
 
-
-
-def generateRiver(matrix, flow_direction="random", symbol="~"):
+def generateRiver(matrix, flow_direction="random", symbol="~", num_bridges=3, bridge_symbol="#", min_bridge_distance=6):
     """
-    Generate a river on the existing matrix with specified flow direction.
+    Generate a river on the existing matrix with specified flow direction and optional bridges.
     
     Parameters:
     - matrix (list of list): The matrix representing the map.
     - flow_direction (str): Direction of river flow. Options:
         "random": randomly choose between left-to-right or top-to-bottom
         "left-right": flows from left edge to right
-        "right-left": flows from right edge to left
         "top-down": flows from top edge to bottom
-        "bottom-up": flows from bottom edge to top
     - symbol (str): The symbol to represent the river (default is '~').
+    - num_bridges (int): Number of bridge symbols to add across the river (default is 0).
+    - bridge_symbol (str): The symbol to represent bridges (default is '#').
+    - min_bridge_distance (int): Minimum distance between bridges (default is 5).
     
     Returns:
-    - matrix (list of list): The modified map with a river.
+    - matrix (list of list): The modified map with a river and bridges.
     """
     
     height = len(matrix)
     width = len(matrix[0])
+    river_path = []  # To keep track of river coordinates
     
     # Set starting position and direction based on flow_direction
     if flow_direction == "random":
@@ -70,10 +70,10 @@ def generateRiver(matrix, flow_direction="random", symbol="~"):
     
     if flow_direction == "left-right":
         start_x = 0
-        start_y = random.randint(4, height - 5)
+        start_y = random.randint(5, height - 6)
         direction = "right"
     elif flow_direction == "top-down":
-        start_x = random.randint(4, width - 5)
+        start_x = random.randint(10, width - 11)
         start_y = 0
         direction = "down"
     else:
@@ -83,33 +83,43 @@ def generateRiver(matrix, flow_direction="random", symbol="~"):
     
     # Create the river path
     while True:
-        # Place the river symbol in the current position
+        # Place the river symbol in the current position and add to river_path
         matrix[current_y][current_x] = symbol
+        river_path.append((current_y, current_x))
         
         # Move in the chosen direction with slight random deviations
         if direction == "right":
             current_x += 1
             current_y += random.choice([-1, 0, 0, 0, 1])  # Bias towards straight movement
-        elif direction == "left":
-            current_x -= 1
-            current_y += random.choice([-1, 0, 0, 0, 1])
         elif direction == "down":
             current_y += 1
-            current_x += random.choice([-1, 0, 0, 0, 1])
-        elif direction == "up":
-            current_y -= 1
             current_x += random.choice([-1, 0, 0, 0, 1])
         
         # Check if we've reached the boundary
         if current_x < 0 or current_x >= width or current_y < 0 or current_y >= height:
             break
-            
+        
         # Prevent the river from moving out of bounds
         current_x = max(0, min(current_x, width - 1))
         current_y = max(0, min(current_y, height - 1))
     
-    return matrix
+    # Add bridges if requested
+    if num_bridges > 0 and len(river_path) > num_bridges * min_bridge_distance:
+        # Filter river path to ensure minimum distance between bridges
+        potential_bridge_positions = []
+        last_bridge_position = -min_bridge_distance  # Initialize far enough to allow first bridge
+        
+        for i, position in enumerate(river_path):
+            if i - last_bridge_position >= min_bridge_distance:
+                potential_bridge_positions.append(position)
+                last_bridge_position = i  # Update position of the last placed bridge candidate
+        
+        # Randomly select bridge positions from the filtered list
+        bridge_positions = random.sample(potential_bridge_positions, num_bridges)
+        for y, x in bridge_positions:
+            matrix[y][x] = bridge_symbol  # Replace river tile with bridge
 
+    return matrix
 
 
 def generateClusters(matrix, symbol, clusters_count, cluster_size_range):
@@ -199,7 +209,7 @@ def addVillage(matrix, position=None):
     
     # Village dimensions
     village_width = 8
-    village_height = 5
+    village_height = 10
     
     # Get matrix dimensions
     matrix_height = len(matrix)
@@ -217,7 +227,7 @@ def addVillage(matrix, position=None):
     # If no position provided, find a random valid position
     if position is None:
         # Try up to 100 times to find a valid position
-        for _ in range(100):
+        for _ in range(500):
             # Generate random position (accounting for village size)
             x = random.randint(0, matrix_width - village_width)
             y = random.randint(0, matrix_height - village_height)

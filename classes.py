@@ -28,10 +28,11 @@ class Character(object):
         self.poisoned = poisoned
         self.bleeding = bleeding
         self.gold = 0
+        self.inventory = []
     
 class Hero(Character):
     def __init__(self):
-        super().__init__(type="Hero", name="Hero", info="Hailing from a lineage of Kings and determined to stop the source of the land's blight, he wields his sword and shield", maxHitpoints=30, defence=0, attack=2, magic=2, agility=15, skill="Singe", weapon="Sword", sp=6)
+        super().__init__(type="Hero", name="Hero", info="Hailing from a lineage of Kings and determined to stop the source of the land's blight, he wields his sword and shield", maxHitpoints=30, defence=0, attack=2, magic=2, agility=15, skill="Singe", weapon="Training Sword", sp=6)
 
 class Barbarian(Character):
     def __init__(self):

@@ -3,8 +3,8 @@ from pygame import mixer
 
 class Levels(object):
 
-    def __init__(self, scroll) -> None:
-
+    def __init__(self, scroll, skills) -> None:
+        self.skillList = skills
         self.scroll = scroll
         xpLevel = {
             1: 0,
@@ -24,6 +24,14 @@ class Levels(object):
             xpLevel[i] = xpLevel[i - 1] + 4500
 
         self.xpLevel = xpLevel
+        self.partySkills = {
+            "Hero": {
+                2: None,
+                3: "Singe",
+                4: None,
+                5: "Heal"
+            }
+        }
 
     def allLevels(self):
 
@@ -53,4 +61,11 @@ class Levels(object):
                 mixer.music.load("sounds\save.mp3")
                 mixer.music.play()
                 self.scroll.text(f"{c.name} has reached level {c.level}!", colour='yellow', stop=True)
-
+                
+                c.hitpoints = c.maxHitpoints
+                c.sp = c.maxSp
+                
+                skill = self.partySkills[c.type][c.level]
+                if skill != None:
+                    c.skills.append(self.skillList[skill])
+                    self.scroll.text(f"{c.name} has learnt a new skill: {skill}!", colour='yellow', hold=True, stop=True)
