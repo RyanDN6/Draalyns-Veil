@@ -27,7 +27,7 @@ class Character(object):
         self.stunned = stunned
         self.poisoned = poisoned
         self.bleeding = bleeding
-        self.gold = 0
+        self.gold = 100
         self.inventory = []
     
 class Hero(Character):

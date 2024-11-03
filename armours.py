@@ -13,6 +13,6 @@ class Armour:
 
 armourList = {
     "Cloth Bandana": Armour(name="Cloth Bandana", type="Head", defence=2, users=["Hero"], cost=25),
-    "Padded Shirt": Armour(name="Padded Bandana", type="Body", defence=3, users=["Hero"], cost=45),
+    "Padded Shirt": Armour(name="Padded Shirt", type="Body", defence=3, users=["Hero"], cost=40),
     "Plank": Armour(name="Plank", type="Shield", defence=2, users=["Hero"], cost=20)
 }
