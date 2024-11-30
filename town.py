@@ -1,6 +1,7 @@
-import os, weapons, armours, items
+import os, weapons, armours
 from pygame import mixer
 from time import sleep
+from play import itemsList
 
 class Town(object):
 
@@ -20,7 +21,7 @@ class Town(object):
         }
 
         self.areaItems = {
-            "Plains": ["Holy Water"]
+            "Plains": ["Holy Water", "Health Potion"]
         }
 
     def enter(self, area, characterList, first=False, quest=False):
@@ -136,7 +137,7 @@ class Town(object):
             elif a == "i":
                 self.scroll.text("----------Item----------", colour='yellow', fast=True)
                 for i in range(len(self.areaItems[area])):
-                    item = items.itemsList[self.areaItems[area][i]]
+                    item = itemsList[self.areaItems[area][i]]
                     self.scroll.text(f"{i + 1} = {item.name} -> {item.cost}", fast=True)
                 self.scroll.text("Type the number of the item to view more.\nType 'q' to go back.")
                 pick = input()
@@ -147,7 +148,7 @@ class Town(object):
                     try:
                         pick = int(pick) - 1
                         if 0 <= pick < len(self.areaItems[area]):
-                            item = items.itemsList[self.areaItems[area][pick]]
+                            item = itemsList[self.areaItems[area][pick]]
                             cost = item.cost
                             self.scroll.text(f"Name: {item.name}\nCost: {item.cost} Gold", stop=True)
                         else:
@@ -170,8 +171,13 @@ class Town(object):
 
                 else:
                     gold -= cost
-                    characterList[0].inventory.append(item)
-                    self.scroll.text(f"The {item.name} has been added to your inventory. Gold: {gold}", stop=True)
+                    if item.count > 0:
+                        characterList[0].inventory.append(item)
+                        self.scroll.text(f"The {item.name} has been added to your inventory. Gold: {gold}", stop=True)
+                        item.count = 1
+                    else:
+                        self.scroll.text(f"The {item.name} has been added to your inventory. Gold: {gold}", stop=True)
+                        item.count += 1
                     characterList[0].gold = gold
         
         self.enter(area, characterList)

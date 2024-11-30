@@ -1,10 +1,74 @@
-import os, sys, copy, platform, classes, levels, pyfiglet, town, enemies, random, map, curses
+#!/usr/bin/env python3.12
+
+import os, copy, platform, classes, levels, pyfiglet, town, enemies, random, map, curses, armours, pickle
 from time import sleep
 from pygame import mixer # Load the required libraries
+from save import save_game, load_game, GameState
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 mixer.init()
+
+class Item:
+    def __init__(self, name, cost=0, battleOnly=False, hit="party", scroll=None, key=False, count=0):
+        self.name = name
+        self.cost = cost
+        self.type = "item"
+        self.battleOnly = battleOnly  # If True, can only be used in battle
+        self.hit = hit  # Who the item targets (e.g., 'party' or specific characters)
+        self.scroll = scroll
+        self.key = key
+        self.count = count  # Track the quantity of the item
+
+    def use(self, target=None):
+        raise NotImplementedError("This item has no use defined yet.")
+
+class HolyWater(Item):
+    def __init__(self):
+        super().__init__(name="Holy Water", cost=10, battleOnly=False)
+
+    def use(self, target):
+        hp = target.hitpoints
+        target.hitpoints = min(hp + 25, target.maxHitpoints)
+        self.scroll.text(f"{target.name} is blessed by the Holy Water.\n{target.name} replenishes 25 HP!", colour='yellow')
+        self.scroll.text(words=f"{healthBar(target.name, target.hitpoints, target.maxHitpoints, target.maxHitpoints//4)}", colour='green', fast=True, hold=True)
+        self.count -= 1  # Decrease the count after use
+
+        # Check if the item should be removed when the count reaches 0
+        if self.count <= 0:
+            target.inventory.remove(self)
+
+class HealthPotion(Item):
+    def __init__(self):
+        super().__init__(name="Health Potion", cost=20, battleOnly=True)
+
+    def use(self, target):
+        hp = target.hitpoints
+        target.hitpoints = min(hp + 50, target.maxHitpoints)
+        self.scroll.text(f"{target.name} drinks a Health Potion and recovers 50 HP!", colour='green')
+        self.count -= 1
+
+        if self.count <= 0:
+            target.inventory.remove(self)
+
+# Example items list
+itemsList = {
+    "Holy Water": HolyWater(),
+    "Health Potion": HealthPotion(),
+}
+
+# Method to display items in the inventory
+def displayItems(scroll, items, battle=False):
+    clear()
+    scroll.text("----------Items----------", colour='yellow', fast=True)
+    for i, item in enumerate(items):
+        if not battle and item.battleOnly == False:  # Only show items that aren't battle-only
+            scroll.text(f"{i + 1} = {item.name} (x{item.count})", colour='cyan')
+        elif battle and item.battleOnly:  # Only show battle items if we're in battle
+            scroll.text(f"{i + 1} = {item.name} (x{item.count})", colour='cyan')
+
+    input()
+
 
 #Difficulty of encounters based on tile of battle
 tiles = {
@@ -84,8 +148,6 @@ class TextScroller:
     def __init__(self, delay=0.04):
         self.delay = delay  # Default base speed
         self.support = self.supports_color()
-        self.sound = mixer.Sound('sounds\\text.mp3')
-        self.typing = mixer.Channel(1)
 
         #Colour codes for the text function
         self.colours = {
@@ -196,10 +258,6 @@ class TextScroller:
             
             sleep(d)  # Use the class's delay attribute
             
-            
-            if sound:
-                self.typing.play(self.sound)
-            
             if support:
                 print(f"\033[1;{self.colours[colour]};40m{words[i]}", end="", flush=True) 
             else:
@@ -231,7 +289,6 @@ def menu(scroll, full=False):
     
     while True: # Will have a save/load function hopefully, for now just a title screen.
         scroll.text("New\t=\tNEW GAME", colour='blue')
-        scroll.text("Save\t=\tSAVE GAME", colour='blue')
         scroll.text("Load\t=\tLOAD GAME", colour='blue')
         scroll.text("Options\t=\tOPTIONS", colour='blue')
         
@@ -256,6 +313,21 @@ def menu(scroll, full=False):
             plains = plains_map()
 
             playMap(plains[1], plains[0], plains[2], party, scroll)
+        
+        elif a == "Load":
+            state = load_game()  # Load the saved game state
+            if state:
+                party = state.party  # Set the loaded party list
+                matrix = state.matrix
+                spawn = state.spawn
+                area = state.area
+                scroll = state.scroll
+
+                scroll.text("Returning to your adventure...", talking=True)
+
+                playMap(matrix, spawn, area, party, scroll)
+            else:
+                print("No saved game found!")
 
 def options(scroll):
     while True:
@@ -321,9 +393,9 @@ def displayCharacters(scroll, Characters, choose=False):
             for i in range(len(Characters)):
                 character = Characters[i]
 
-                if character.hitpoints / character.maxHitpoints < 0.25:
+                if character.hitpoints / character.maxHitpoints <= 0.25:
                     col = "red"
-                elif character.hitpoints / character.maxHitpoints < 0.5:
+                elif character.hitpoints / character.maxHitpoints <= 0.5:
                     col = "yellow"
                 else:
                     col = "white"
@@ -360,10 +432,10 @@ def displayEnemies(scroll, aliveEnemies):
         status_string = " ".join(status_indicators)
 
 
-        if aliveEnemies[i].hitpoints / aliveEnemies[i].maxHitpoints < 0.25:
+        if aliveEnemies[i].hitpoints / aliveEnemies[i].maxHitpoints <= 0.25:
             scroll.text(f"{i + 1} = {aliveEnemies[i].name} {status_string}", colour='red')
 
-        elif aliveEnemies[i].hitpoints / aliveEnemies[i].maxHitpoints < 0.5:
+        elif aliveEnemies[i].hitpoints / aliveEnemies[i].maxHitpoints <= 0.5:
             scroll.text(f"{i + 1} = {aliveEnemies[i].name} {status_string}", colour='yellow')
 
         else:
@@ -474,6 +546,7 @@ def melee(scroll, attacker, aliveEnemies):
             continue
 
 def skill(scroll, attacker, characterList, aliveEnemies):
+
     
     while True:
         try:
@@ -547,6 +620,73 @@ def skill(scroll, attacker, characterList, aliveEnemies):
             scroll.text(f"an error occured: {str(e)}", stop=True)
             continue
 
+def item(scroll, user, characterList, aliveEnemies, battle=False):
+    while True:
+        try:
+            # Display the items that can be used in the current context (battle or not)
+            filtered_items = [item for item in user.inventory if item.type == "item" and 
+                              (not battle or (battle and item.battleOnly))]
+            
+            # Display the items
+            displayItems(scroll, filtered_items, battle=True)
+            scroll.text(f"'q' to return.")
+            
+            pick = input()
+            if pick == "q":
+                return pick  # Exit function if user presses 'q'
+            
+            try:
+                pick = int(pick) - 1
+                if pick < 0 or pick >= len(filtered_items):
+                    continue  # Invalid selection, prompt user again
+            except ValueError:
+                continue  # If input is not a number, prompt user again
+
+            # Get the selected item from filtered list
+            selected_item = filtered_items[pick]
+            
+            if selected_item.count <= 0:
+                scroll.text(f"You have no more of {selected_item.name}!", colour="red")
+                continue  # Skip to next iteration if item count is zero
+
+            # Use the item based on its 'hit' attribute
+            if selected_item.hit == "me":
+                selected_item.use(user)
+
+            elif selected_item.hit == "party":
+                scroll.text("Use on who? (Type the NUMBER of the ally)")
+                displayCharacters(scroll, characterList, choose=True)
+                scroll.text(f"'q' to return.")
+                pick = input()
+                if pick == "q":
+                    continue
+
+                pick = int(pick) - 1
+                if 0 <= pick < len(characterList):
+                    target = characterList[pick]
+                    selected_item.use(target)
+
+            elif selected_item.hit == "enemy":
+                scroll.text("Attack who? (Type the NUMBER of the enemy)")
+                displayEnemies(scroll, aliveEnemies)
+                scroll.text(f"'q' to return.")
+                pick = input()
+                if pick == "q":
+                    continue
+
+                pick = int(pick) - 1
+                if 0 <= pick < len(aliveEnemies):
+                    target = aliveEnemies[pick]
+                    selected_item.use(target)
+
+            break  # After using an item, exit the loop
+
+        except Exception as e:
+            scroll.text(f"An error occurred: {str(e)}", stop=True)
+            continue
+
+
+
 def battle(scroll, enemyList=None, characterList=[], tile="."):
     mixer.music.load("sounds\Ambush.mp3")
     mixer.music.play(-1)
@@ -611,21 +751,16 @@ def battle(scroll, enemyList=None, characterList=[], tile="."):
             attacker.defend = False
 
         if attacker in characterList:
+            if attacker.taunt:
+                taunt_temp += 1
+                
+                if taunt_temp == 3:
+                    attacker.taunt = False
+                    scroll.text(f"{attacker.name}'s taunt wears off.")
             while True:
                 displayCharacters(scroll, characterList)
                 
                 scroll.text(f"It's {attacker.name}'s turn!")
-                ################################################### ONLY WAY I CAN MANAGE TO RESET SKILLS IS IN HERE ONCE ITS THEIR TURN
-                
-                if attacker.taunt:
-                    taunt_temp += 1
-                    
-                    if taunt_temp == 3:
-                        attacker.taunt = False
-                        scroll.text(f"{attacker.name}'s taunt wears off.")
-                
-                ################################################### ONLY WAY I CAN MANAGE TO RESET SKILLS IS IN HERE ONCE ITS THEIR TURN
-                
                 scroll.text(words=f"{attacker.name}: 'a' = Attack | 's' = Skills | 'i' = Item | 'd' = Defend | 'f' = Flee |'?' = Info |", colour="cyan", fast=True)
                 
                 a = input()
@@ -664,6 +799,9 @@ def battle(scroll, enemyList=None, characterList=[], tile="."):
                                 break
                             else:
                                 scroll.text(f"Not enough SP to use any skills!", hold=True)
+                
+                elif a == "i":
+                    item(scroll, characterList[0], characterList, aliveEnemies, True)
 
             for target in aliveEnemies:
                 if target.hitpoints == 0:
@@ -686,9 +824,12 @@ def battle(scroll, enemyList=None, characterList=[], tile="."):
                 if character.taunt:
                     target = character
                     scroll.text(f"The enemy is enraged by {character.name}'s taunt!", hold=True)
-
+            
+            hpTemp = target.hitpoints
             attack(scroll, attacker, target)
-            scroll.text(words=f'{healthBar(target.name, target.hitpoints, target.maxHitpoints, target.maxHitpoints//4)}', colour="red", fast=True, hold=True) #Displays health bar
+            
+            if hpTemp != target.hitpoints:
+                scroll.text(words=f'{healthBar(target.name, target.hitpoints, target.maxHitpoints, target.maxHitpoints//4)}', colour="red", fast=True, hold=True) #Displays health bar
             
             if target.hitpoints == 0:
                 scroll.text(f"{target.name} has died!", stop=True)
@@ -783,16 +924,6 @@ def plains_map():
     plains = map.addVillage(plains)
     coords = map.spawn(plains)
     return [coords, plains, "Plains"]
-
-def displayItems(scroll, party):
-    clear()
-    items = [item for item in party[0].inventory if item.type == "item"]
-    scroll.text("----------Items----------", colour='yellow', fast=True)
-    
-    for i in range(len(items)):
-        scroll.text(f"{i + 1} = {items[i].name}")
-    
-    input()
 
 def equipment(scroll, party):
     clear()
@@ -908,8 +1039,9 @@ def playMap(matrix, player_pos, area, party, scroll=None):
             screen.addstr(len(matrix) + 6, 1,f"Current tile: {tile}")
             # Refresh the screen
             screen.refresh()
-            sleep(.15)
+            sleep(.10)
             # Get input
+            flush_input(screen)
             key = chr(screen.getch())
             if key in ["w", "a", "s", "d"]:
                 new_x, new_y = x, y
@@ -1005,6 +1137,11 @@ def playMap(matrix, player_pos, area, party, scroll=None):
                 clear()
                 
                 if key == "q":
+                    scroll.text("Save progress?")
+                    if scroll.confirm():
+                        state = GameState(party=party, matrix=matrix, area=area, spawn=player_pos, scroll=scroll)
+                        save_game(state)  # Save the current game state
+
                     scroll.text("Are you sure you wish to return to the main menu? Progress will NOT BE SAVED")
                     if scroll.confirm():
                         mixer.music.stop()
@@ -1019,13 +1156,27 @@ def playMap(matrix, player_pos, area, party, scroll=None):
                     lvl.partyLevels(party)
                     input("Press any key to return")
                 elif key == "i":
-                    displayItems(scroll, party)
+                    displayItems(scroll, [item for item in party[0].inventory if item.type == "item"])
                 elif key == "e":
                     equipment(scroll, party)
                     pass                
 
                 screen = curses.initscr()
                 colour_mapping = curseStart(screen)
+    except Exception as e:
+        mixer.music.stop()
+        mixer.music.load("sounds\Error.mp3")
+        mixer.music.play()
+        curseEnd(screen)
+        print(f"Sorry, but there was an error:\n'{e}'.\nWould you like to save your game? Beware this may save a corrupted file.\nIf you'd rather return to your previous save, that is your choice.")
+        if scroll.confirm():
+            state = GameState(party=party, matrix=matrix, area=area, spawn=None, scroll=scroll)
+            save_game(state)  # Save the current game state
+        print(f"Would you like to return to the menu?")
+        if scroll.confirm():
+            menu(scroll, full=True)
+        else:
+            exit()
             
     finally:
         # Clean up curses
@@ -1043,4 +1194,14 @@ if __name__ == '__main__':
     t = town.Town(scroll)
 
     while True:
-        menu(scroll, True)
+        try:
+            menu(scroll, True)
+        except Exception as e:
+            mixer.music.stop()
+            mixer.music.load("sounds\Error.mp3")
+            mixer.music.play()
+            print(f"Error occured: {e}.\nRestart?")
+            if scroll.confirm():
+                continue
+            else:
+                exit()
