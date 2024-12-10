@@ -1,5 +1,4 @@
 # Draayln's Veil
-
 ## THIS GAME IS MADE FOR PYTHON 3.12, DOWNLOAD CAN BE FOUND HERE: [https://www.python.org/downloads/](url)
 
 There's two ways to play the game:
